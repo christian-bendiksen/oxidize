@@ -1,0 +1,44 @@
+use anyhow::{Context, Result};
+use std::path::PathBuf;
+
+/// Filesystem paths used throughout the app.
+#[derive(Clone, Debug)]
+pub struct Ctx {
+    pub config_dir: PathBuf,
+    pub data_dir: PathBuf,
+    pub templates_dir: PathBuf,
+    pub user_templates_dir: PathBuf,
+    pub generated_dir: PathBuf,
+    pub live_dir: PathBuf,
+    pub current_link: PathBuf,
+    pub current_theme_file: PathBuf,
+    pub background_link: PathBuf,
+}
+
+impl Ctx {
+    /// Construct paths from environment variables.
+    pub fn new() -> Result<Self> {
+        let home = std::env::var("HOME").context("$HOME is not set")?;
+
+        let xdg = std::env::var("XDG_CONFIG_HOME")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| format!("{home}/.config"));
+
+        let config_dir = PathBuf::from(xdg).join("oxidize");
+        let themes = config_dir.join("themes");
+        let generated_dir = themes.join("generated");
+
+        Ok(Self {
+            data_dir: themes.join("data"),
+            templates_dir: themes.join("templates"),
+            user_templates_dir: themes.join("user-templates"),
+            live_dir: generated_dir.join("live"),
+            current_link: themes.join("current"),
+            current_theme_file: themes.join("current.theme"),
+            background_link: themes.join("background"),
+            generated_dir,
+            config_dir,
+        })
+    }
+}

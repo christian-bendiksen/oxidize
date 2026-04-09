@@ -1,3 +1,4 @@
+mod border;
 pub mod colors;
 mod vars;
 
@@ -35,8 +36,13 @@ impl Theme {
             );
         }
 
-        let vars = build_vars_from_colors(&colors_file)
+        let mut vars = build_vars_from_colors(&colors_file)
             .with_context(|| format!("build vars for theme '{name}'"))?;
+
+        let border_color = border::resolve(&root).or_else(|| vars.get("accent").cloned());
+        if let Some(color) = border_color {
+            vars::insert_border_active(&mut vars, color.as_str());
+        }
 
         let bg_dir = root.join("backgrounds");
 

@@ -188,10 +188,15 @@ fn toml_str(val: &toml::Value, key: &str) -> Option<String> {
     val.get(key)?.as_str().map(|s| normalize_color(s))
 }
 
-fn normalize_color(s: &str) -> String {
+pub fn normalize_color(s: &str) -> String {
     let s = s.trim_matches('"').trim_matches('\'');
     if s.starts_with('#') {
         s.to_owned()
+    } else if let Some(inner) = s.strip_prefix("rgba(").and_then(|s| s.strip_suffix(')')) {
+        // rgba(rrggbbaa) - strip alpha, keep first 6 hex chars
+        format!("#{}", &inner.trim()[..6])
+    } else if let Some(inner) = s.strip_prefix("rgb(").and_then(|s| s.strip_suffix(')')) {
+        format!("{}", inner.trim())
     } else {
         format!("#{s}")
     }

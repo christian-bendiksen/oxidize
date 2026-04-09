@@ -69,3 +69,8 @@ fn hex_to_rgb(hex: &str) -> Option<String> {
     let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
     Some(format!("{r},{g},{b}"))
 }
+
+pub fn insert_border_active(vars: &mut HashMap<String, String>, color: &str) {
+    vars.insert("border_active".to_owned(), color.to_owned());
+    vars.extend(derive_color_keys("border_active", color));
+}

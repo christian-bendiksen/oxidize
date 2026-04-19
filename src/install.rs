@@ -47,6 +47,20 @@ fn git_clone(url: &str, dest: &Path) -> Result<()> {
     Ok(())
 }
 
+pub fn git_pull(path: &Path) -> Result<()> {
+    let status = Command::new("git")
+        .arg("-C")
+        .arg(path)
+        .args(["pull", "--ff-only"])
+        .status()
+        .context("spawn git")?;
+
+    if !status.success() {
+        bail!("git pull failed in {}", path.display());
+    }
+    Ok(())
+}
+
 pub fn run(ctx: &Ctx, url: &str) -> Result<String> {
     let name = theme_name_from_url(url)?;
     let dest = ctx.data_dir.join(&name);

@@ -39,9 +39,17 @@ impl Theme {
         let mut vars = build_vars_from_colors(&colors_file)
             .with_context(|| format!("build vars for theme '{name}'"))?;
 
-        let border_color = border::resolve(&root).or_else(|| vars.get("accent").cloned());
-        if let Some(color) = border_color {
-            vars::insert_border_active(&mut vars, color.as_str());
+        let borders = border::resolve(&root);
+        let active = borders.active.or_else(|| vars.get("accent").cloned());
+        let inactive = borders
+            .inactive
+            .or_else(|| vars.get("color8").cloned())
+            .or_else(|| active.clone());
+        if let Some(c) = &active {
+            vars::insert_border(&mut vars, "active", c);
+        }
+        if let Some(c) = &inactive {
+            vars::insert_border(&mut vars, "inactive", c);
         }
 
         let bg_dir = root.join("backgrounds");

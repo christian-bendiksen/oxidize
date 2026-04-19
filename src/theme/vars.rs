@@ -70,7 +70,8 @@ fn hex_to_rgb(hex: &str) -> Option<String> {
     Some(format!("{r},{g},{b}"))
 }
 
-pub fn insert_border_active(vars: &mut HashMap<String, String>, color: &str) {
-    vars.insert("border_active".to_owned(), color.to_owned());
-    vars.extend(derive_color_keys("border_active", color));
+pub fn insert_border(vars: &mut HashMap<String, String>, kind: &str, color: &str) {
+    let key = format!("border_{kind}");
+    vars.extend(derive_color_keys(&key, color));
+    vars.insert(key, color.to_owned());
 }

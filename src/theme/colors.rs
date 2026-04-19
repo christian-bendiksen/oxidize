@@ -196,7 +196,7 @@ pub fn normalize_color(s: &str) -> String {
         // rgba(rrggbbaa) - strip alpha, keep first 6 hex chars
         format!("#{}", &inner.trim()[..6])
     } else if let Some(inner) = s.strip_prefix("rgb(").and_then(|s| s.strip_suffix(')')) {
-        format!("{}", inner.trim())
+        format!("#{}", inner.trim())
     } else {
         format!("#{s}")
     }

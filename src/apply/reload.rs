@@ -18,6 +18,7 @@ pub fn run(ctx: &Ctx) {
     pkill_signal("kitty", "SIGUSR1");
     pkill_signal("ghostty", "SIGUSR1");
     reload_alacritty(ctx);
+    restart_swayosd();
 }
 
 fn pkill_signal(name: &str, signal: &str) {
@@ -42,4 +43,15 @@ fn reload_alacritty(ctx: &Ctx) {
     if conf.exists() {
         detach(Command::new("touch").arg(conf));
     }
+}
+
+fn restart_swayosd() {
+    Command::new("pkill")
+        .args(["-x", "swayosd-server"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .ok();
+    detach(&mut Command::new("swayosd-server"));
 }

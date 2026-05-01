@@ -17,6 +17,7 @@ pub fn run(ctx: &Ctx) {
     pkill_signal("btop", "SIGUSR2");
     pkill_signal("kitty", "SIGUSR1");
     pkill_signal("ghostty", "SIGUSR1");
+    pkill_signal("hx", "SIGUSR1");
     reload_alacritty(ctx);
     restart_swayosd();
 }

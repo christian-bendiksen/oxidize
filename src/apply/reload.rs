@@ -19,6 +19,7 @@ pub fn run(ctx: &Ctx) {
     pkill_signal("ghostty", "SIGUSR1");
     pkill_signal("hx", "SIGUSR1");
     reload_alacritty(ctx);
+    reload_mango();
     restart_swayosd();
 }
 
@@ -44,6 +45,10 @@ fn reload_alacritty(ctx: &Ctx) {
     if conf.exists() {
         detach(Command::new("touch").arg(conf));
     }
+}
+
+fn reload_mango() {
+    detach(Command::new("mmsg").args(["-d", "reload_config"]));
 }
 
 fn restart_swayosd() {

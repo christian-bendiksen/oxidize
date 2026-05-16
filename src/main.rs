@@ -78,7 +78,6 @@ enum Cmd {
 
     /// Cycle to the next wallpaper for the current theme
     Wallpaper,
-
 }
 
 fn main() -> Result<()> {
@@ -171,16 +170,21 @@ fn cmd_set(ctx: &Ctx, theme_name: &str, flags: apply::ApplyFlags) -> Result<()> 
         return Ok(());
     }
 
-    // Apply steps are best-effort: warn on failure, never abort.
-    if !flags.skip_gnome {
-        apply::gnome::run(&theme, flags.skip_icons);
-    }
+    // Ssend the signal to gio module before applying gsettings.
+    // This is because browsers are only reading a change to
+    // gtk-theme gsettings.
     if let Err(e) = apply::gtk_css::emit_current(ctx, Some(&theme)) {
         eprintln!("warn: gtk-css reload failed: {e:#}");
     }
+
+    if !flags.skip_gnome {
+        apply::gnome::run(&theme, flags.skip_icons);
+    }
+
     if !flags.skip_reload {
         apply::reload::run(ctx);
     }
+
     if !flags.skip_wallpaper {
         if let Err(e) = apply::wallpaper::run(ctx, &theme) {
             eprintln!("warn: wallpaper apply failed: {e:#}");

@@ -12,7 +12,17 @@ pub fn run(theme: &Theme, skip_icons: bool) {
         ("prefer-dark", "adw-gtk3-dark")
     };
 
+    // Hack for chromium browsers.
+    // Chromium browser do not register a theme change
+    // before a theme switch has happened.
+    let gtk_theme_ping = if theme.is_light {
+        "adw-gtk3-dark"
+    } else {
+        "adw-gtk3"
+    };
+
     gsettings_set(SCHEMA, "color-scheme", color_scheme);
+    gsettings_set(SCHEMA, "gtk-theme", gtk_theme_ping);
     gsettings_set(SCHEMA, "gtk-theme", gtk_theme);
 
     if !skip_icons {

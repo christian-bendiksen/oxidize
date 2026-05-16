@@ -78,6 +78,7 @@ enum Cmd {
 
     /// Cycle to the next wallpaper for the current theme
     Wallpaper,
+
 }
 
 fn main() -> Result<()> {
@@ -173,6 +174,9 @@ fn cmd_set(ctx: &Ctx, theme_name: &str, flags: apply::ApplyFlags) -> Result<()> 
     // Apply steps are best-effort: warn on failure, never abort.
     if !flags.skip_gnome {
         apply::gnome::run(&theme, flags.skip_icons);
+    }
+    if let Err(e) = apply::gtk_css::emit_current(ctx, Some(&theme)) {
+        eprintln!("warn: gtk-css reload failed: {e:#}");
     }
     if !flags.skip_reload {
         apply::reload::run(ctx);

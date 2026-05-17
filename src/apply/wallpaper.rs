@@ -90,7 +90,12 @@ fn pick_next<'a>(candidates: &'a [Candidate], current: Option<&str>) -> &'a Path
 
 fn change_wallpaper(path: &Path) {
     Command::new("awww")
-        .args(["img", &path.to_string_lossy(), "--transition-type=none"])
+        .args([
+            "img",
+            &path.to_string_lossy(),
+            "--transition-type=fade",
+            "--transition-duration=0.6",
+        ])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())

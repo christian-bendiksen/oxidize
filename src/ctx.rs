@@ -4,6 +4,7 @@ use std::path::PathBuf;
 /// Filesystem paths used throughout the app.
 #[derive(Clone, Debug)]
 pub struct Ctx {
+    pub config_home: PathBuf,
     pub config_dir: PathBuf,
     pub data_dir: PathBuf,
     pub templates_dir: PathBuf,
@@ -25,11 +26,13 @@ impl Ctx {
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| format!("{home}/.config"));
 
+        let config_home = PathBuf::from(&home).join(".config");
         let config_dir = PathBuf::from(xdg).join("oxidize");
         let themes = config_dir.join("themes");
         let generated_dir = themes.join("generated");
 
         Ok(Self {
+            config_home,
             data_dir: themes.join("data"),
             templates_dir: themes.join("templates"),
             user_templates_dir: themes.join("user-templates"),

@@ -12,23 +12,14 @@ pub fn run(theme: &Theme, skip_icons: bool) {
         ("prefer-dark", "adw-gtk3-dark")
     };
 
-    // Hack for chromium browsers.
-    // Chromium browser do not register a theme change
-    // before a theme switch has happened.
-    let gtk_theme_ping = if theme.is_light {
-        "adw-gtk3-dark"
-    } else {
-        "adw-gtk3"
-    };
-
+    // The GIO module (liboxidize_gio) fires notify::gtk-theme-name directly
+    // inside Chromium at CSS-reload time, so the ping-pong is no longer needed
+    // and was causing a visible white flash during the fade animation.
     gsettings_set(SCHEMA, "color-scheme", color_scheme);
-    gsettings_set(SCHEMA, "gtk-theme", gtk_theme_ping);
     gsettings_set(SCHEMA, "gtk-theme", gtk_theme);
 
-    if !skip_icons {
-        if let Some(icon) = theme.icon_theme.as_deref() {
-            gsettings_set(SCHEMA, "icon-theme", icon);
-        }
+    if !skip_icons && let Some(icon) = theme.icon_theme.as_deref() {
+        gsettings_set(SCHEMA, "icon-theme", icon);
     }
 }
 

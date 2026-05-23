@@ -67,7 +67,7 @@ fn render_one(
 
     let rendered = expand(&src, vars);
 
-    let out_path = out_dir.join(&rel.with_extension("")); // strip .tpl
+    let out_path = out_dir.join(rel.with_extension("")); // strip .tpl
 
     if let Some(parent) = out_path.parent() {
         fs::create_dir_all(parent)

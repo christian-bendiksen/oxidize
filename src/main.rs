@@ -170,9 +170,11 @@ fn cmd_set(ctx: &Ctx, theme_name: &str, flags: apply::ApplyFlags) -> Result<()> 
         return Ok(());
     }
 
-    // Ssend the signal to gio module before applying gsettings.
-    // This is because browsers are only reading a change to
-    // gtk-theme gsettings.
+    // Re-land the gtk.css symlinks so GTK's GFileMonitor fires IN_MOVED_TO.
+    // This triggers built-in CSS reload in all GTK apps (including Brave Flatpak)
+    // before the gsettings ping-pong causes them to re-query their theme colors.
+    apply::gtk_css::refresh_user_css_links(ctx);
+
     if let Err(e) = apply::gtk_css::emit_current(ctx, Some(&theme)) {
         eprintln!("warn: gtk-css reload failed: {e:#}");
     }
@@ -185,10 +187,8 @@ fn cmd_set(ctx: &Ctx, theme_name: &str, flags: apply::ApplyFlags) -> Result<()> 
         apply::reload::run(ctx);
     }
 
-    if !flags.skip_wallpaper {
-        if let Err(e) = apply::wallpaper::run(ctx, &theme) {
-            eprintln!("warn: wallpaper apply failed: {e:#}");
-        }
+    if !flags.skip_wallpaper && let Err(e) = apply::wallpaper::run(ctx, &theme) {
+        eprintln!("warn: wallpaper apply failed: {e:#}");
     }
 
     Ok(())

@@ -67,7 +67,7 @@ fn write_waybar_header(ctx: &Ctx) -> io::Result<()> {
     fs::write(&dest, format!("{header}\n{user_css}"))
 }
 
-fn strip_oxidize_header<'a>(s: &'a str) -> &'a str {
+fn strip_oxidize_header(s: &str) -> &str {
     let Some(rest) = s.strip_prefix(OX_BEGIN) else {
         return s;
     };

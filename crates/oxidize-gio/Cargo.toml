@@ -1,0 +1,15 @@
+[package]
+name        = "oxidize-gio"
+version     = "0.1.0"
+edition     = "2024"
+license     = "LGPL-2.1-or-later"
+description = "GIO module for oxidize GTK CSS live-reload"
+
+[lib]
+name       = "oxidize_gio"
+crate-type = ["cdylib"]
+
+[dependencies]
+glib = "0.20"
+gio  = "0.20"
+libc = "0.2"

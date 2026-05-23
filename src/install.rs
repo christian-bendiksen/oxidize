@@ -67,10 +67,8 @@ pub fn run(ctx: &Ctx, url: &str) -> Result<String> {
     git_clone(url, &dest).with_context(|| format!("install theme '{name}' from {url}"))?;
 
     let colors_toml = dest.join("colors.toml");
-    if !colors_toml.exists() {
-        if let Some(generated) = theme::colors::generate(&dest) {
-            std::fs::write(&colors_toml, generated).context("write generated colors.toml")?;
-        }
+    if !colors_toml.exists() && let Some(generated) = theme::colors::generate(&dest) {
+        std::fs::write(&colors_toml, generated).context("write generated colors.toml")?;
     }
 
     Ok(name)

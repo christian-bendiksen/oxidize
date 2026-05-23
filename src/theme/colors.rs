@@ -74,10 +74,8 @@ fn generate_from_alacritty(theme_dir: &Path) -> Option<String> {
 }
 
 fn fallback(map: &mut HashMap<String, String>, key: &str, source: &str) {
-    if !map.contains_key(key) {
-        if let Some(val) = map.get(source).cloned() {
-            map.insert(key.to_owned(), val);
-        }
+    if !map.contains_key(key) && let Some(val) = map.get(source).cloned() {
+        map.insert(key.to_owned(), val);
     }
 }
 
@@ -106,10 +104,10 @@ fn parse_ghostty(conf: &str) -> HashMap<String, String> {
         let (key, val) = (key.trim(), val.trim());
 
         if key == "palette" {
-            if let Some((idx, color)) = val.split_once('=') {
-                if let Ok(n) = idx.trim().parse::<u8>() {
-                    map.insert(format!("color{n}"), normalize_color(color.trim()));
-                }
+            if let Some((idx, color)) = val.split_once('=')
+                && let Ok(n) = idx.trim().parse::<u8>()
+            {
+                map.insert(format!("color{n}"), normalize_color(color.trim()));
             }
             continue;
         }
@@ -144,10 +142,10 @@ fn parse_alacritty(conf: &str) -> Option<HashMap<String, String>> {
     }
 
     // Cursor: check [colors.cursor].cursor, then fallback to foreground
-    if let Some(cursor_section) = colors.get("cursor") {
-        if let Some(v) = toml_str(cursor_section, "cursor") {
-            map.insert("cursor".into(), v);
-        }
+    if let Some(cursor_section) = colors.get("cursor")
+        && let Some(v) = toml_str(cursor_section, "cursor")
+    {
+        map.insert("cursor".into(), v);
     }
     fallback(&mut map, "cursor", "foreground");
 
@@ -185,7 +183,7 @@ fn parse_alacritty(conf: &str) -> Option<HashMap<String, String>> {
 }
 
 fn toml_str(val: &toml::Value, key: &str) -> Option<String> {
-    val.get(key)?.as_str().map(|s| normalize_color(s))
+    val.get(key)?.as_str().map(normalize_color)
 }
 
 pub fn normalize_color(s: &str) -> String {

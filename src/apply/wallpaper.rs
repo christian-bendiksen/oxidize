@@ -27,7 +27,7 @@ pub fn run(ctx: &Ctx, theme: &Theme) -> Result<()> {
     let current = canonical_str(&ctx.background_link);
 
     let next = pick_next(&candidates, current.as_deref());
-    util::symlink_force(&next, &ctx.background_link)?;
+    util::symlink_force(next, &ctx.background_link)?;
 
     change_wallpaper(&ctx.background_link);
     Ok(())

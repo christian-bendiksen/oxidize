@@ -15,6 +15,32 @@ use std::{
 const DBUS_OBJECT_PATH: &str = "/org/oxidize/Appearance1";
 const DBUS_SIGNAL: &str = "org.oxidize.Appearance1.Changed";
 
+/// Atomically re-land the ~/.config/gtk-{3,4}.0/gtk.css symlinks so that
+/// GTK's GFileMonitor sees a real file-system event and reloads all apps
+/// (including Brave Flatpak) without any D-Bus round-trip.
+///
+/// GTK's inotify monitor watches the *filename* inside the parent directory.
+/// It fires on IN_MOVED_TO, which happens when we rename a temp symlink over
+/// the existing one — even though the target string is unchanged.
+pub fn refresh_user_css_links(ctx: &Ctx) {
+    use std::os::unix::fs::symlink;
+
+    let target = ctx.current_link.join("gtk.css");
+    let dirs = [
+        ctx.config_home.join("gtk-3.0"),
+        ctx.config_home.join("gtk-4.0"),
+    ];
+
+    for dir in &dirs {
+        let dst = dir.join("gtk.css");
+        let tmp = dir.join(".gtk.css.oxidize.tmp");
+        let _ = fs::remove_file(&tmp);
+        if symlink(&target, &tmp).is_ok() {
+            let _ = fs::rename(&tmp, &dst);
+        }
+    }
+}
+
 pub fn emit_current(ctx: &Ctx, theme: Option<&Theme>) -> Result<()> {
     let owned_theme;
     let theme = match theme {

@@ -1,112 +1,120 @@
 use crate::ctx::Ctx;
+use kdl::KdlDocument;
 use std::{
-    fs, io,
+    fs,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
-    time::{SystemTime, UNIX_EPOCH},
 };
 
-/// Reload waybar, mako, kitty, btop
+#[derive(Debug)]
+enum ReloadAction {
+    Signal { process: String, signal: String },
+    Command { cmd: String, args: Vec<String> },
+    Touch { path: PathBuf },
+}
+
 pub fn run(ctx: &Ctx) {
-    reload_waybar(ctx);
+    let kdl_path = ctx.config_dir.join("bindings.kdl");
 
-    detach(Command::new("makoctl").arg("reload"));
-
-    pkill_signal("btop", "SIGUSR2");
-    pkill_signal("kitty", "SIGUSR1");
-    pkill_signal("ghostty", "SIGUSR1");
-    pkill_signal("hx", "SIGUSR1");
-    reload_alacritty(ctx);
-    reload_mango();
-    restart_swayosd();
-}
-
-fn pkill_signal(name: &str, signal: &str) {
-    let flag = format!("-{signal}");
-    detach(Command::new("pkill").args([flag.as_str(), name]));
-}
-
-fn reload_waybar(ctx: &Ctx) {
-    if let Err(err) = write_waybar_header(ctx) {
-        eprintln!("warn: failed to update waybar CSS: {err}");
-    }
-}
-
-const OX_BEGIN: &str = "/* oxidize:begin */";
-const OX_END: &str = "/* oxidize:end */";
-
-fn write_waybar_header(ctx: &Ctx) -> io::Result<()> {
-    let dest = ctx.config_home.join("waybar/style.css");
-    let src = ctx.current_link.join("waybar.css");
-
-    if !src.is_file() {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("missing generated waybar CSS: {}", src.display()),
-        ));
-    }
-
-    if let Some(parent) = dest.parent() {
-        fs::create_dir_all(parent)?;
-    }
-
-    let existing = fs::read_to_string(&dest).unwrap_or_default();
-    let user_css = strip_oxidize_header(&existing);
-
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-
-    let header = format!(
-        "{OX_BEGIN}\n\
-         /* rev:{ts} */\n\
-         @import url(\"../oxidize/themes/current/waybar.css\");\n\
-         {OX_END}\n"
-    );
-
-    fs::write(&dest, format!("{header}\n{user_css}"))
-}
-
-fn strip_oxidize_header(s: &str) -> &str {
-    let Some(rest) = s.strip_prefix(OX_BEGIN) else {
-        return s;
+    let Some(actions) = parse_reload_actions(&kdl_path) else {
+        eprintln!("info: no reload bindings found at {}", kdl_path.display());
+        return;
     };
-    let Some(pos) = rest.find(OX_END) else {
-        return s;
-    };
-    rest[pos + OX_END.len()..].trim_start_matches('\n')
+
+    for action in actions {
+        execute_action(action);
+    }
 }
 
-fn detach(cmd: &mut Command) {
-    cmd.stdin(Stdio::null())
+fn parse_reload_actions(kdl_path: &Path) -> Option<Vec<ReloadAction>> {
+    let content = fs::read_to_string(kdl_path).ok()?;
+    let doc: KdlDocument = content.parse().ok()?;
+
+    let mut actions = Vec::new();
+
+    for bind_node in doc.nodes().iter().filter(|n| n.name().value() == "bind") {
+        let Some(reload_node) = bind_node.children().and_then(|c| c.get("reload")) else {
+            continue;
+        };
+        let Some(strategies) = reload_node.children() else {
+            continue;
+        };
+
+        for strategy in strategies.nodes() {
+            match strategy.name().value() {
+                "signal" => {
+                    if let (Some(process), Some(signal)) = (
+                        strategy.get("process").and_then(|v| v.as_string()),
+                        strategy.get("signal").and_then(|v| v.as_string()),
+                    ) {
+                        actions.push(ReloadAction::Signal {
+                            process: process.to_owned(),
+                            signal: signal.to_owned(),
+                        })
+                    };
+                }
+                "command" => {
+                    if let Some(argv) = strategy.children().and_then(|c| c.get("argv")) {
+                        let mut args: Vec<String> = argv
+                            .iter()
+                            .filter_map(|a| a.value().as_string().map(expand_tilde))
+                            .collect();
+                        if !args.is_empty() {
+                            let cmd = args.remove(0);
+                            actions.push(ReloadAction::Command { cmd, args });
+                        }
+                    }
+                }
+                "touch" => {
+                    if let Some(path_str) = strategy.get("path").and_then(|v| v.as_string()) {
+                        actions.push(ReloadAction::Touch {
+                            path: PathBuf::from(expand_tilde(path_str)),
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    Some(actions)
+}
+
+fn execute_action(action: ReloadAction) {
+    match action {
+        ReloadAction::Signal { process, signal } => {
+            let flag = if signal.starts_with('-') {
+                signal
+            } else {
+                format!("-{signal}")
+            };
+            spawn_detached("pkill", &[&flag, &process]);
+        }
+        ReloadAction::Command { cmd, args } => {
+            let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+            spawn_detached(&cmd, &arg_refs);
+        }
+        ReloadAction::Touch { path } => {
+            spawn_detached("touch", &[&path.to_string_lossy()]);
+        }
+    }
+}
+
+fn spawn_detached(cmd: &str, args: &[&str]) {
+    Command::new(cmd)
+        .args(args)
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
         .ok();
 }
 
-fn reload_alacritty(ctx: &Ctx) {
-    let conf = ctx
-        .config_dir
-        .parent()
-        .unwrap_or(&ctx.config_dir)
-        .join("alacritty/alacritty.toml");
-    if conf.exists() {
-        detach(Command::new("touch").arg(conf));
+fn expand_tilde(s: &str) -> String {
+    if let Some(stripped) = s.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return format!("{home}/{stripped}");
+        }
     }
-}
-
-fn reload_mango() {
-    detach(Command::new("mmsg").args(["-d", "reload_config"]));
-}
-
-fn restart_swayosd() {
-    Command::new("pkill")
-        .args(["-x", "swayosd-server"])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .ok();
-    detach(&mut Command::new("swayosd-server"));
+    s.to_string()
 }
